@@ -62,7 +62,7 @@ def dump_element(root, ns, indent, element, name, parents):
 
 parser = ArgumentParser()
 parser.add_argument("-r", "--relax-schema", help="Relax schema file to dump")
-parser.add_argument("-i", "--ignore-file", help="File containing a list of element names to hide")
+#parser.add_argument("-i", "--ignore-file", help="File containing a list of element names to hide")
 
 args = parser.parse_args()
 
