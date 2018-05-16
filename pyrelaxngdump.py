@@ -8,6 +8,12 @@ from copy import deepcopy
 
 indentsize=5
 
+def ignoreClass(className, ignoreClasses):
+	return className in ignoreClasses
+
+def readIgnoreFile(file):
+	return [line.rstrip('\n') for line in open(file)]
+
 def dump_attributes(element, ns):
 	attributes=''
 	attribs=element.findall(".//ns:attribute", ns)
@@ -16,7 +22,7 @@ def dump_attributes(element, ns):
 
 	return attributes
 
-def dump_element(root, ns, indent, element, name, parents):
+def dump_element(root, ns, indent, element, name, parents, ignoreClasses):
 	#print("Dumping: '" + element + " - parents: " + dumps(parents))
 	#print("*** " + element + " ***")
 	newparents = deepcopy(parents)
@@ -33,7 +39,9 @@ def dump_element(root, ns, indent, element, name, parents):
 
 		print(indentstr+"<" + displayname + dump_attributes(elementnode, ns) + ">")
 		if element in parents:
-			print(subindentstr+" - skipping " + element)
+			print(subindentstr+" - skipping (already expanded)")
+		elif ignoreClass(displayname, ignoreClasses):
+			print(subindentstr+" - skipping (in ignore file)")
 		else:
 			newparents.append(element)
 
@@ -49,11 +57,7 @@ def dump_element(root, ns, indent, element, name, parents):
 				else:
 					elementname=None
 
-				dump_element(root, ns, indent+1, subclass.attrib['name'], elementname, newparents)
-
-#			members=elementnode.findall("./ns:zeroOrMore/ns:ref", ns)
-#			for member in members:
-#				dump_element(root, ns, indent+1, member.attrib['name'], newparents)
+				dump_element(root, ns, indent+1, subclass.attrib['name'], elementname, newparents, ignoreClasses)
 
 		print(indentstr+"</" + displayname + ">")
 	else:
@@ -62,12 +66,22 @@ def dump_element(root, ns, indent, element, name, parents):
 
 parser = ArgumentParser()
 parser.add_argument("-r", "--relax-schema", help="Relax schema file to dump")
-#parser.add_argument("-i", "--ignore-file", help="File containing a list of element names to hide")
+parser.add_argument("-i", "--ignore-file", help="File containing a list of element names to hide")
 
 args = parser.parse_args()
 
 if args.relax_schema:
 	if os.path.isfile(args.relax_schema):
+		ignoreClasses=[]
+
+		if args.ignore_file:
+			if os.path.isfile(args.ignore_file):
+				ignoreClasses=readIgnoreFile(args.ignore_file)
+				print("Classes to ignore: " + ",".join(ignoreClasses))
+			else:
+				print("Error opening ignore file: '" + args.ignore_file + "'")
+				exit(-3)
+
 		tree = ET.parse(args.relax_schema)
 		root = tree.getroot()
 
@@ -76,7 +90,7 @@ if args.relax_schema:
 		start = root.find("ns:start", ns)
 		startref = start.find("ns:ref", ns)
 		parents=[]
-		dump_element(root, ns, 0, startref.attrib['name'], None, parents)
+		dump_element(root, ns, 0, startref.attrib['name'], None, parents, ignoreClasses)
 	else:
 		print('Error opening relax schema file: \'' + args.relax_schema + '\'')
 		exit(-2)
