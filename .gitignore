@@ -102,3 +102,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Test 'ignore' file
+ignore
+
+# Schema file
+musicbrainz_mmd-2.0.rng
